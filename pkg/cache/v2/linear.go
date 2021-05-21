@@ -295,6 +295,8 @@ func (cache *LinearCache) CreateDeltaWatch(request *DeltaRequest, st *stream.Str
 	value := make(chan DeltaResponse, 1)
 	systemVersion := cache.versionPrefix + strconv.FormatUint(cache.version, 10)
 
+	cache.mu.Lock()
+	defer cache.mu.Unlock()
 	// if respondDelta returns nil this means that there is no change in any resource version from the previous snapshot
 	// create a new watch accordingly
 	if respondDelta(request, value, st, cache.resources, systemVersion, cache.log) == nil {
@@ -304,9 +306,7 @@ func (cache *LinearCache) CreateDeltaWatch(request *DeltaRequest, st *stream.Str
 				cache.typeURL, st.ResourceVersions, systemVersion)
 		}
 
-		cache.mu.Lock()
 		cache.deltaWatches[watchID] = DeltaResponseWatch{Request: request, Response: value, StreamState: st}
-		cache.mu.Unlock()
 
 		return value, cache.cancelDeltaWatch(watchID)
 	}
